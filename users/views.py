@@ -139,12 +139,13 @@ def create_symptoms(request):
         "physical_activity": None,
         "recent_stroke": None,
         "weight": None,
-        "age": user_data.get("Age") if user_data.get("Age") else None,  
-        "gender": user_data.get("Gender") if user_data.get("Gender") else None,
     }
 
     new_symptoms = {key: data.get(key, None) for key in symptom_fields}
     new_symptoms["patient_id"] = patient_id
+    new_symptoms["age"] = user_data.get("Age") if user_data.get("Age") else None
+    new_symptoms["gender"] = user_data.get("Gender") if user_data.get("Gender") else None
+
     db.collection("Symptoms").document(patient_id).delete()
     db.collection("Symptoms").document(patient_id).set(new_symptoms)
     return Response({"message": "Symptoms created successfully", "symptoms": new_symptoms})
