@@ -85,7 +85,10 @@ def get_medical_history(request, email):
 @api_view(['POST'])
 def update_medical_history(request):
     data = request.data
-    patient_id = data.get("patient_id")
+    email = data.get("email")
+    user_ref = db.collection("users").document(email).get()
+    user_data = user_ref.to_dict()
+    patient_id = user_data.get("patient_id")
 
     if not patient_id:
         return Response({"error": "patient_id is required"}, status=400)
