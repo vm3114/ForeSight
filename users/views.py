@@ -70,7 +70,10 @@ def login(request):
 
 
 @api_view(['GET'])
-def get_medical_history(request, patient_id):
+def get_medical_history(request, email):
+    user_ref = db.collection("users").document(email).get()
+    user_data = user_ref.to_dict()
+    patient_id = user_data.get("patient_id")
     med_history_ref = db.collection("Medical_History").document(patient_id).get()
 
     if not med_history_ref.exists:
