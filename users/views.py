@@ -13,6 +13,11 @@ from .auth_middleware import SECRET_KEY, ALGORITHM
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
+def create_access_token(email: str):
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    return jwt.encode({"sub": email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
+
+
 @api_view(['GET'])
 def test_endpoint(request):
     return Response({"message": "User endpoint works"})
@@ -40,11 +45,6 @@ def register_user(request):
     })
 
     return Response({"message": "User registered successfully", "patient_id": data["patient_id"]})
-
-
-def create_access_token(email: str):
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    return jwt.encode({"sub": email, "exp": expire}, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @api_view(['POST'])

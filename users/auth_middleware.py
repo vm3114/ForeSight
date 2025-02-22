@@ -11,7 +11,7 @@ ALGORITHM = os.getenv("ALGORITHM")
 
 def authenticate_request(get_response):
     def middleware(request):
-        if request.path in ["/user/register/", "/user/login/"]:
+        if request.path in ["/user/register/", "/user/login/", "/user/test_endpoint/"]:
             return get_response(request)
         
         token = request.headers.get("Authorization")
