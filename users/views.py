@@ -42,7 +42,6 @@ def register_user(request):
         "current_medications": [],
         "family_medical_history": [],
         "past_medical_diagnoses": [],
-        "surgical_history": []
     })
 
     access_token = create_access_token(data["Email"])
@@ -70,6 +69,16 @@ def login(request):
     return Response({"access_token": access_token, "token_type": "bearer"})
 
 
+@api_view(['GET'])
+def get_medical_history(request, patient_id):
+    med_history_ref = db.collection("Medical_History").document(patient_id).get()
+
+    if not med_history_ref.exists:
+        return Response({"error": "Medical history not found"}, status=404)
+
+    return Response({"medical_history": med_history_ref.to_dict()})
+
+
 @api_view(['POST'])
 def update_medical_history(request):
     data = request.data
@@ -84,23 +93,19 @@ def update_medical_history(request):
     if not med_history_doc.exists:
         return Response({"error": "Medical history not found"}, status=404)
 
-    fields = ["allergies", "current_medications", "family_medical_history", "past_medical_diagnoses", "surgical_history"]
+    fields = ["allergies", "current_medications", "family_medical_history", "past_medical_diagnoses"]
     update_data = {}
 
     for field in fields:
         if field in data and isinstance(data[field], list):
-            update_data[field] = firestore.ArrayUnion(data[field])
+            update_data[field] = data[field]
 
     if not update_data:
         return Response({"error": "No valid fields provided for update"}, status=400)
 
     med_history_ref.update(update_data)
-    updated_doc = med_history_ref.get().to_dict()
-
-    return Response({
-        "message": "Medical history updated successfully",
-        "updated_fields": {key: updated_doc[key] for key in update_data}
-    })
+    med_history_doc = db.collection("Medical_History").document(patient_id).get()
+    return Response({"message": "Medical history updated successfully", "medical_history": med_history_doc.to_dict()})
 
 
 @api_view(['POST'])
