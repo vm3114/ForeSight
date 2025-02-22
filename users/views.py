@@ -13,6 +13,11 @@ from .auth_middleware import SECRET_KEY, ALGORITHM
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
+@api_view(['GET'])
+def test_endpoint(request):
+    return Response({"message": "User endpoint works"})
+
+
 @api_view(['POST'])
 def register_user(request):
     data = request.data
