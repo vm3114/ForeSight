@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import create_encounter
+from .views import *
 
 urlpatterns = [
     path('create/', create_encounter, name="create_encounter"),
+    path('stats/', create_stats, name="create_stats"),
 ]

@@ -8,7 +8,15 @@ from utils.firebase_init import db
 def create_encounter(request):
     data = request.data
 
-    patient_id = data.get("patient_id")
+    email = data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    user_ref = db.collection("users").document(email).get()
+    if not user_ref.exists:
+        return Response({"error": "incorrect email"}, status=400)
+    
+    user_data = user_ref.to_dict()
+    patient_id = user_data.get("patient_id")
     start_date = data.get("start_date")  # Expecting ISO 8601 format (e.g., "2025-02-22T14:00:00Z")
 
     if not patient_id or not start_date:
@@ -40,16 +48,20 @@ def create_stats(request):
         return Response({"error": "encounter_id is required"}, status=400)
 
     default_stats = {
-        "bmi": None,
-        "body_temp": None,
-        "bp": None,
-        "cholesterol": None,
         "co2": None,
-        "general_health": None,
-        "glucose": None,
+        "chloride": None,
+        "weight": None,
+        "sodium": None,
+        "creatinine": None,
+        "bmi": None,
+        "calcium": None,
+        "potassium": None,
+        "tobacco_status": None,
         "height": None,
+        "bp_diastolic": None,
+        "bp_systolic": None,
+        "heart_rate": None,
         "respiratory_rate": None,
-        "weight": None
     }
 
     new_stats = {**default_stats, **{k: v for k, v in data.items() if k in default_stats}}
@@ -59,7 +71,3 @@ def create_stats(request):
     stats_ref.set(new_stats)
 
     return Response({"message": "Stats created successfully", "stats": new_stats})
-
-
-["weight", "bp_systolic", "bp_diastolic", "respiratory_rate", "tobacco", "co2", "glucose", "nitrogen",
-  "creatinine", "calcium", "sodium", "bmi", "heart_rate", "height"]

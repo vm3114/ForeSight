@@ -115,40 +115,57 @@ def update_medical_history(request):
 
 
 @api_view(['POST'])
-def update_or_create_symptoms(request):
+def create_symptoms(request):
     data = request.data
-    patient_id = data.get("patient_id")
-
-    if not patient_id:
-        return Response({"error": "patient_id is required"}, status=400)
-
-    symptoms_ref = db.collection("Symptoms").document(patient_id)
-    symptoms_doc = symptoms_ref.get()
-
-    default_symptoms = {
-        "alcohol_consumption": False,
-        "bmi": 24.5,
-        "bp_diastolic": 80,
-        "bp_systolic": 120,
-        "cholesterol": 0,
-        "difficulty_walking": False,
-        "does_smoke": False,
-        "general_health": 5,
-        "glucose": 0,
-        "physical_activity": True,
-        "recent_stroke": False
+    email = data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    user_ref = db.collection("users").document(email).get()
+    if not user_ref.exists:
+        return Response({"error": "incorrect email"}, status=400)
+    
+    user_data = user_ref.to_dict()
+    patient_id = user_data.get("patient_id")
+    symptom_fields = {
+        "alcohol_consumption": None,
+        "bp_diastolic": None,
+        "bp_systolic": None,
+        "cholesterol": None,
+        "difficulty_walking": None,
+        "does_smoke": None,
+        "general_health": None,
+        "glucose": None,
+        "height": None,
+        "physical_activity": None,
+        "recent_stroke": None,
+        "weight": None,
+        "age": user_data.get("Age") if user_data.get("Age") else None,  
+        "gender": user_data.get("Gender") if user_data.get("Gender") else None,
     }
 
-    if symptoms_doc.exists:
-        update_data = {key: value for key, value in data.items() if key in default_symptoms}
-        if not update_data:
-            return Response({"error": "No valid fields provided for update"}, status=400)
-        symptoms_ref.update(update_data)
-        return Response({"message": "Symptoms updated successfully", "updated_fields": update_data})
+    new_symptoms = {key: data.get(key, None) for key in symptom_fields}
+    new_symptoms["patient_id"] = patient_id
+    db.collection("Symptoms").document(patient_id).delete()
+    db.collection("Symptoms").document(patient_id).set(new_symptoms)
+    return Response({"message": "Symptoms created successfully", "symptoms": new_symptoms})
 
-    new_symptoms = {**default_symptoms, **data}
-    symptoms_ref.set(new_symptoms)
-    return Response({"message": "Symptoms record created successfully", "symptoms": new_symptoms})
+
+@api_view(['GET'])
+def get_symptoms_by_email(request, email):
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+
+    user_ref = db.collection("users").document(email).get()
+    if not user_ref.exists:
+        return Response({"error": "User not found"}, status=404)
+
+    user_data = user_ref.to_dict()
+    patient_id = user_data.get("patient_id")
+    symptoms_ref = db.collection("Symptoms").document(patient_id).get()
+
+    if not symptoms_ref.exists:
+        return Response({"message": "No symptoms found", "symptoms": None})
+    return Response({"message": "Symptoms retrieved successfully", "symptoms": symptoms_ref.to_dict()})
 
 
 @api_view(['POST'])
