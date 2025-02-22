@@ -26,6 +26,7 @@ def test_endpoint(request):
 @api_view(['POST'])
 def register_user(request):
     data = request.data
+
     user_ref = db.collection("users").where("Email", "==", data["Email"]).stream()
     if any(user_ref):
         return Response({"error": "Email already exists"}, status=400)
@@ -44,7 +45,13 @@ def register_user(request):
         "surgical_history": []
     })
 
-    return Response({"message": "User registered successfully", "patient_id": data["patient_id"]})
+    access_token = create_access_token(data["Email"])
+    return Response({
+        "message": "User registered successfully",
+        "patient_id": patient_id,
+        "access_token": access_token,
+        "token_type": "bearer"
+    })
 
 
 @api_view(['POST'])
