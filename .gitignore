@@ -1,0 +1,52 @@
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+
+# Django secret settings
+*.sqlite3
+db.sqlite3
+config.json
+.env
+firebase_config.json
+
+# Ignore logs
+*.log
+logs/
+debug.log
+
+# Ignore migrations (if auto-generated)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Ignore static and media files (if using collectstatic)
+staticfiles/
+media/
+
+# Ignore IDE & OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Ignore Python package management files
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Ignore coverage reports
+htmlcov/
+.coverage
+*.cover
+*.py,cover
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore __MACOSX (for Mac users)
+__MACOSX/
