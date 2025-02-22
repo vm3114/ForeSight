@@ -9,7 +9,6 @@ from firebase_admin import firestore
 from utils.firebase_init import db
 from .auth import hash_password
 from .auth_middleware import SECRET_KEY, ALGORITHM
-from .auth_utils import decode_access_token
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
@@ -138,7 +137,6 @@ def update_or_create_symptoms(request):
 
     new_symptoms = {**default_symptoms, **data}
     symptoms_ref.set(new_symptoms)
-
     return Response({"message": "Symptoms record created successfully", "symptoms": new_symptoms})
 
 
@@ -162,21 +160,3 @@ def get_user_details_by_email(request):
         "user_details": user_data,
         "medical_history": med_history_data if med_history_data else "No medical history found"
     })
-
-
-@api_view(['GET'])
-def get_user_from_token(request):
-    auth_header = request.headers.get("Authorization")
-
-    if not auth_header or " " not in auth_header:
-        return Response({"error": "Token required"}, status=401)
-
-    token_type, token_value = auth_header.split(" ", 1)
-    if token_type.lower() != "bearer":
-        return Response({"error": "Invalid token format"}, status=401)
-
-    email = decode_access_token(token_value)
-    if isinstance(email, Response):
-        return email
-
-    return Response({"message": "Token decoded successfully", "email": email})

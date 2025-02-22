@@ -1,6 +1,6 @@
 import jwt
 from django.conf import settings
-from .auth_middleware import SECRET_KEY, ALGORITHM
+from users.auth_middleware import SECRET_KEY, ALGORITHM
 from rest_framework.response import Response
 
 def decode_access_token(token):
