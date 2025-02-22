@@ -29,3 +29,37 @@ def create_encounter(request):
 
     encounter_ref = db.collection("Encounters").add(encounter_data)
     return Response({"message": "Encounter created successfully", "encounter_id": encounter_ref[1].id})
+
+
+@api_view(['POST'])
+def create_stats(request):
+    data = request.data
+    encounter_id = data.get("encounter_id")
+
+    if not encounter_id:
+        return Response({"error": "encounter_id is required"}, status=400)
+
+    default_stats = {
+        "bmi": None,
+        "body_temp": None,
+        "bp": None,
+        "cholesterol": None,
+        "co2": None,
+        "general_health": None,
+        "glucose": None,
+        "height": None,
+        "respiratory_rate": None,
+        "weight": None
+    }
+
+    new_stats = {**default_stats, **{k: v for k, v in data.items() if k in default_stats}}
+    new_stats["encounter_id"] = encounter_id
+
+    stats_ref = db.collection("Stats").document(encounter_id)
+    stats_ref.set(new_stats)
+
+    return Response({"message": "Stats created successfully", "stats": new_stats})
+
+
+["weight", "bp_systolic", "bp_diastolic", "respiratory_rate", "tobacco", "co2", "glucose", "nitrogen",
+  "creatinine", "calcium", "sodium", "bmi", "heart_rate", "height"]
