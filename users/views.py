@@ -10,7 +10,7 @@ from firebase_admin import firestore
 from utils.firebase_init import db
 from .auth import hash_password
 from .auth_middleware import SECRET_KEY, ALGORITHM
-from prevention import *
+from .prevention import *
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
