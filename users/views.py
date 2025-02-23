@@ -273,6 +273,8 @@ def get_prevention(request):
     age = user_data.get("Age")
     gender = user_data.get("Gender")
 
+    gender = 1 if gender.lower() == "male" else 0
+
     symptoms_ref = db.collection("Symptoms").document(patient_id).get()
     if not symptoms_ref.exists:
         return Response({"error": "No symptoms data found"}, status=404)
