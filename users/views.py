@@ -11,6 +11,7 @@ from firebase_init import db
 from .auth import hash_password
 from .auth_middleware import SECRET_KEY, ALGORITHM
 from .prevention import *
+import joblib, pickle
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
@@ -259,68 +260,88 @@ def get_allergies(request):
 def get_prevention(request):
     data = request.data
     email = data.get("email")
+
     if not email:
-        return Response({"error": "email is required"}, status=400)
+        return Response({"error": "Email is required"}, status=400)
     
     user_doc = db.collection("users").document(email).get()
+    if not user_doc.exists:
+        return Response({"error": "User not found"}, status=404)
+
     user_data = user_doc.to_dict()
     patient_id = user_data.get("patient_id")
     age = user_data.get("Age")
     gender = user_data.get("Gender")
 
     symptoms_ref = db.collection("Symptoms").document(patient_id).get()
-    symptoms_data = symptoms_ref.to_dict() if symptoms_ref.exists else None
+    if not symptoms_ref.exists:
+        return Response({"error": "No symptoms data found"}, status=404)
 
+    symptoms_data = symptoms_ref.to_dict()
     ap_hi = symptoms_data.get("bp_systolic")
     ap_lo = symptoms_data.get("bp_diastolic")
     cholesterol = symptoms_data.get("cholesterol")
-    gluc = symptoms_data.get("glucose")
+    glucose = symptoms_data.get("glucose")
+    weight = symptoms_data.get("weight")
+    height = symptoms_data.get("height")
     smoke = symptoms_data.get("does_smoke")
     active = symptoms_data.get("physical_activity")
-    bmi = symptoms_data.get("weight") / (symptoms_data.get("height") / 100) ** 2
-    high_bp = ap_hi > 130 or ap_lo > 80
-    high_chol = cholesterol > 200
     stroke = symptoms_data.get("recent_stroke")
     heavy_alcohol = symptoms_data.get("alcohol_consumption")
     gen_health = symptoms_data.get("general_health")
     diffwalk = symptoms_data.get("difficulty_walking")
 
+    high_bp = 1 if (ap_hi and ap_hi > 130) or (ap_lo and ap_lo > 80) else 0
+    high_chol = 1 if cholesterol and cholesterol > 200 else 0
+    bmi = (weight / (height / 100) ** 2) if weight and height else None
 
-    loaded_model = joblib.load("best_model.pkl")
+    smoke = int(smoke) if isinstance(smoke, bool) else smoke
+    stroke = int(stroke) if isinstance(stroke, bool) else stroke
+    active = int(active) if isinstance(active, bool) else active
+    heavy_alcohol = int(heavy_alcohol) if isinstance(heavy_alcohol, bool) else heavy_alcohol
+    diffwalk = int(diffwalk) if isinstance(diffwalk, bool) else diffwalk
+
+    if None in [ap_hi, ap_lo, cholesterol, glucose, smoke, active, bmi]:
+        return Response({"error": "Not all parameters available for heart disease prediction."}, status=400)
+
+    if None in [high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk, gender, age]:
+        return Response({"error": "Not all parameters available for diabetes prediction."}, status=400)
+
+    heart_model = joblib.load("best_model.pkl")
+    diabetes_model = joblib.load("best_catboost_model.pkl")
+
     try:
-        scaler = joblib.load("scaler.pkl")
+        heart_scaler = joblib.load("scaler.pkl")
     except:
-        scaler = None  
-    if not any([ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi]):
-        return Response({"error": "Not all parameters available for heart."}, status=404)
-    result_h, prob_h = predict_heart_from_features(loaded_model, scaler, age, ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi, threshold=0.3)
+        heart_scaler = None  
 
-
-    loaded_model = joblib.load("best_catboost_model.pkl")
     try:
         with open("scaler1.pkl", "rb") as scaler_file:
-            scaler = pickle.load(scaler_file)
+            diabetes_scaler = pickle.load(scaler_file)
     except FileNotFoundError:
-        scaler = None
+        diabetes_scaler = None
 
-    if not any([high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk]):
-        return Response({"error": "Not all parameters available for diabetes."}, status=404)
-    result_d, prob_d = predict_diab_from_features(loaded_model, scaler, high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk, gender, age, threshold=0.5)
-
+    result_h, prob_h = predict_heart_from_features(
+        heart_model, heart_scaler, age, ap_hi, ap_lo, cholesterol, glucose, smoke, active, bmi, threshold=0.3
+    )
+    
+    result_d, prob_d = predict_diab_from_features(
+        diabetes_model, diabetes_scaler, high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk, gender, age, threshold=0.5
+    )
 
     if prob_d < 0.33:
-        diabetes_message = "You're at a low risk for diabetes, but maintaining a healthy lifestyle is key to long-term well-being. Keep up your balanced diet, stay active with at least 30 minutes of exercise most days, and monitor your sugar intake."
+        diabetes_message = "You're at a low risk for diabetes, but maintaining a healthy lifestyle is key. Keep up your balanced diet and exercise."
     elif prob_d < 0.67:
-        diabetes_message = "Your risk for diabetes is moderate. This is a great time to take preventive steps! Focus on a diet rich in whole grains, fiber, and lean proteins while reducing processed sugars. Engage in at least 150 minutes of physical activity per week and monitor your blood sugar levels regularly."
+        diabetes_message = "Your risk for diabetes is moderate. Focus on a healthy diet, regular physical activity, and monitoring blood sugar levels."
     else:
-        diabetes_message = "Your risk for diabetes is high. Immediate lifestyle changes can help prevent or delay its onset. Adopt a strict low-carb, high-fiber diet, exercise consistently (including strength training and cardio), and monitor your blood sugar levels closely. Consult a healthcare provider for personalized guidance."
+        diabetes_message = "Your risk for diabetes is high. Adopt a strict low-carb, high-fiber diet, exercise consistently, and monitor your blood sugar closely."
 
     if prob_h < 0.33:
-        heart_message = "Your heart health looks good, but prevention is always better than cure! Maintain a heart-healthy diet with plenty of fruits, vegetables, and healthy fats. Stay active, manage stress, and avoid smoking or excessive alcohol consumption."
+        heart_message = "Your heart health looks good! Maintain a heart-healthy diet and stay active."
     elif prob_h < 0.67:
-        heart_message = "Your risk for heart disease is moderate. Now is the time to take proactive steps! Focus on a Mediterranean-style diet, maintain a healthy weight, and ensure regular physical activity. Monitor your cholesterol and blood pressure levels, manage stress, and avoid smoking."
+        heart_message = "Your risk for heart disease is moderate. Focus on a Mediterranean-style diet, regular exercise, and stress management."
     else:
-        heart_message = "Your risk for heart disease is high. Immediate intervention is necessary to protect your heart. Adopt a strict heart-healthy diet (low in salt, unhealthy fats, and refined carbs), exercise daily with a mix of cardio and strength training, and monitor blood pressure and cholesterol levels closely. Consult a cardiologist for personalized guidance."
+        heart_message = "Your risk for heart disease is high. Adopt a heart-healthy diet, exercise daily, and monitor blood pressure closely."
 
     return Response({
         "message": "success",
