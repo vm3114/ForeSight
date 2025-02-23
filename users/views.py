@@ -256,13 +256,7 @@ def get_allergies(request):
 
 
 @api_view(['POST'])
-def prevention(request):
-    loaded_model = joblib.load("best_model.pkl")
-    try:
-        scaler = joblib.load("scaler.pkl")
-    except:
-        scaler = None  
-
+def get_prevention(request):
     data = request.data
     email = data.get("email")
     if not email:
@@ -272,9 +266,11 @@ def prevention(request):
     user_data = user_doc.to_dict()
     patient_id = user_data.get("patient_id")
     age = user_data.get("Age")
+    gender = user_data.get("Gender")
 
     symptoms_ref = db.collection("Symptoms").document(patient_id).get()
     symptoms_data = symptoms_ref.to_dict() if symptoms_ref.exists else None
+
     ap_hi = symptoms_data.get("bp_systolic")
     ap_lo = symptoms_data.get("bp_diastolic")
     cholesterol = symptoms_data.get("cholesterol")
@@ -282,11 +278,54 @@ def prevention(request):
     smoke = symptoms_data.get("does_smoke")
     active = symptoms_data.get("physical_activity")
     bmi = symptoms_data.get("weight") / (symptoms_data.get("height") / 100) ** 2
+    high_bp = ap_hi > 130 or ap_lo > 80
+    high_chol = cholesterol > 200
+    stroke = symptoms_data.get("recent_stroke")
+    heavy_alcohol = symptoms_data.get("alcohol_consumption")
+    gen_health = symptoms_data.get("general_health")
+    diffwalk = symptoms_data.get("difficulty_walking")
 
+
+    loaded_model = joblib.load("best_model.pkl")
+    try:
+        scaler = joblib.load("scaler.pkl")
+    except:
+        scaler = None  
     if not any([ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi]):
-        return Response({"error": "Not all parameters available."}, status=404)
-    
-    result, prob = predict_disease_from_features(loaded_model, scaler, age, ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi, threshold=0.3)
-    final = f"Predicted Label: {result}, Probability: {prob:.4f}"
-    return Response({"message": "success", "result": final})
+        return Response({"error": "Not all parameters available for heart."}, status=404)
+    result_h, prob_h = predict_heart_from_features(loaded_model, scaler, age, ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi, threshold=0.3)
 
+
+    loaded_model = joblib.load("best_catboost_model.pkl")
+    try:
+        with open("scaler1.pkl", "rb") as scaler_file:
+            scaler = pickle.load(scaler_file)
+    except FileNotFoundError:
+        scaler = None
+
+    if not any([high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk]):
+        return Response({"error": "Not all parameters available for diabetes."}, status=404)
+    result_d, prob_d = predict_diab_from_features(loaded_model, scaler, high_bp, high_chol, bmi, smoke, stroke, active, heavy_alcohol, gen_health, diffwalk, gender, age, threshold=0.5)
+
+
+    if prob_d < 0.33:
+        diabetes_message = "You're at a low risk for diabetes, but maintaining a healthy lifestyle is key to long-term well-being. Keep up your balanced diet, stay active with at least 30 minutes of exercise most days, and monitor your sugar intake."
+    elif prob_d < 0.67:
+        diabetes_message = "Your risk for diabetes is moderate. This is a great time to take preventive steps! Focus on a diet rich in whole grains, fiber, and lean proteins while reducing processed sugars. Engage in at least 150 minutes of physical activity per week and monitor your blood sugar levels regularly."
+    else:
+        diabetes_message = "Your risk for diabetes is high. Immediate lifestyle changes can help prevent or delay its onset. Adopt a strict low-carb, high-fiber diet, exercise consistently (including strength training and cardio), and monitor your blood sugar levels closely. Consult a healthcare provider for personalized guidance."
+
+    if prob_h < 0.33:
+        heart_message = "Your heart health looks good, but prevention is always better than cure! Maintain a heart-healthy diet with plenty of fruits, vegetables, and healthy fats. Stay active, manage stress, and avoid smoking or excessive alcohol consumption."
+    elif prob_h < 0.67:
+        heart_message = "Your risk for heart disease is moderate. Now is the time to take proactive steps! Focus on a Mediterranean-style diet, maintain a healthy weight, and ensure regular physical activity. Monitor your cholesterol and blood pressure levels, manage stress, and avoid smoking."
+    else:
+        heart_message = "Your risk for heart disease is high. Immediate intervention is necessary to protect your heart. Adopt a strict heart-healthy diet (low in salt, unhealthy fats, and refined carbs), exercise daily with a mix of cardio and strength training, and monitor blood pressure and cholesterol levels closely. Consult a cardiologist for personalized guidance."
+
+    return Response({
+        "message": "success",
+        "result": {
+            "diabetes_prevention": diabetes_message,
+            "heart_disease_prevention": heart_message
+        }
+    })
