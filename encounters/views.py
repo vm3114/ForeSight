@@ -6,7 +6,7 @@ from datetime import datetime
 from dateutil.parser import parse
 import numpy as np
 import pickle
-from encounter_ai import predict_disease_from_features, load_model_from_pickle
+from .encounter_ai import predict_disease_from_features, load_model_from_pickle
 
 
 @api_view(['POST'])
