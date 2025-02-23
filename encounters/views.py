@@ -133,4 +133,9 @@ def create_diagnosis(request):
     predicted_index, prob = predict_disease_from_features(loaded_model, *test_features)
     decoded_label = loaded_encoder.inverse_transform([predicted_index])[0]
 
-    return Response({"message": "Diagnosis created successfully", "diagnosis": decoded_label, "probability": f"{prob:.4f}"})
+    disease_ref = db.collection("Diseases").document(decoded_label)
+    disease_data = disease_ref.get().to_dict()
+    items = disease_data.get("items")
+    medicine = [item for item in items]
+
+    return Response({"message": "Diagnosis created successfully", "diagnosis": decoded_label, "medicine": medicine, "probability": f"{prob:.4f}"})
