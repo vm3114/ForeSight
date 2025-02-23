@@ -256,6 +256,25 @@ def get_allergies(request):
     return Response({"message": "success", "allergies": next_page(medications, allergies)})
 
 
+@api_view(['GET'])
+def get_all_user_data(request, email):
+    users_ref = db.collection("users").document(email).get()
+    user = users_ref.to_dict()
+    patient_id = user.get("patient_id")
+    
+    symptoms_ref = db.collection("Symptoms").document(patient_id).get()
+    symptoms = symptoms_ref.to_dict()
+
+    med_history_ref = db.collection("Medical_History").document(patient_id).get()
+    med_history = med_history_ref.to_dict()
+
+    return Response({
+        "user": user,
+        "symptoms": symptoms,
+        "medical_history": med_history
+    })
+
+
 @api_view(['POST'])
 def get_prevention(request):
     data = request.data

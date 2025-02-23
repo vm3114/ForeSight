@@ -16,7 +16,7 @@ def authenticate_request(get_response):
         
         token = request.headers.get("Authorization")
         if not token:
-            return JsonResponse({"error": "Authentication token required"}, status=401)
+            return JsonResponse({"error": "Authentication token required"}, status=69)
 
         try:
             payload = jwt.decode(token.split(" ")[1], SECRET_KEY, algorithms=[ALGORITHM])
@@ -26,9 +26,9 @@ def authenticate_request(get_response):
                 return JsonResponse({"error": "User not found"}, status=401)
             request.user = user_ref.to_dict()
         except jwt.ExpiredSignatureError:
-            return JsonResponse({"error": "Token expired"}, status=401)
+            return JsonResponse({"error": "Token expired"}, status=69)
         except jwt.InvalidTokenError:
-            return JsonResponse({"error": "Invalid token"}, status=401)
+            return JsonResponse({"error": "Invalid token"}, status=69)
 
         return get_response(request)
     return middleware

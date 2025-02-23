@@ -14,4 +14,5 @@ urlpatterns = [
     path('get_allergies/', get_allergies, name="get_allergies"),
     path('get_family_history/', get_family_history, name="get_family_history"),
     path('prevention/', get_prevention, name="get_prevention"),
+    path('get_all_user_data/<str:email>/', get_all_user_data, name="get_all_user_data"),
 ]
