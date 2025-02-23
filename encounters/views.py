@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from google.cloud import firestore
-from utils.firebase_init import db
+from firebase_init import db
 from datetime import datetime
 from dateutil.parser import parse
 

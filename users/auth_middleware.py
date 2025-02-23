@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 import jwt
-from utils.firebase_init import db
+from firebase_init import db
 from dotenv import load_dotenv
 import os
 

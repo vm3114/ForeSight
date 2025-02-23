@@ -7,7 +7,7 @@ from env import last_page, next_page, jinja2templates, jinja
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from firebase_admin import firestore
-from utils.firebase_init import db
+from firebase_init import db
 from .auth import hash_password
 from .auth_middleware import SECRET_KEY, ALGORITHM
 from .prevention import *
