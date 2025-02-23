@@ -4,6 +4,9 @@ from google.cloud import firestore
 from firebase_init import db
 from datetime import datetime
 from dateutil.parser import parse
+import numpy as np
+import pickle
+from encounter_ai import predict_disease_from_features, load_model_from_pickle
 
 
 @api_view(['POST'])
@@ -72,3 +75,62 @@ def create_stats(request):
     stats_ref.set(new_stats)
 
     return Response({"message": "Stats created successfully", "stats": new_stats})
+
+
+@api_view(['POST'])
+def create_diagnosis(request):
+    data = request.data
+    encounter_id = data.get("encounter_id")
+
+    if not encounter_id:
+        return Response({"error": "encounter_id is required"}, status=400)
+
+    encounter_ref = db.collection("Encounters").document(encounter_id).get()
+    if not encounter_ref.exists:
+        return Response({"error": "Encounter not found"}, status=400)
+    
+    stats_ref = db.collection("Stats").document(encounter_id).get()
+    if not stats_ref.exists:
+        return Response({"error": "Stats not found"}, status=400)
+    
+    encounter_data = encounter_ref.to_dict()
+    stats_data = stats_ref.to_dict()
+    
+    pain_severity = encounter_data.get("pain_severity")
+    co2 = stats_data.get("co2")
+    chloride = stats_data.get("chloride")
+    weight = stats_data.get("weight")
+    sodium = stats_data.get("sodium")
+    creatinine = stats_data.get("creatinine")
+    bmi = stats_data.get("bmi")
+    calcium = stats_data.get("calcium")
+    potassium = stats_data.get("potassium")
+    tobacco_status = stats_data.get("tobacco_status")
+    height = stats_data.get("height")
+    bp_diastolic = stats_data.get("bp_diastolic")
+    bp_systolic = stats_data.get("bp_systolic")
+    heart_rate = stats_data.get("heart_rate")
+    respiratory_rate = stats_data.get("respiratory_rate")
+
+    stats_fields = [
+        "pain_severity", "co2", "chloride", "weight", "sodium", "creatinine", "bmi", 
+        "calcium", "potassium", "tobacco_status", "height", "bp_diastolic", 
+        "bp_systolic", "heart_rate", "respiratory_rate"
+    ]
+
+    for field in stats_fields:
+        if locals().get(field) is None:
+            locals()[field] = np.nan
+
+    model_path = "model_with_weights.pkl"
+    loaded_model, loaded_encoder, loaded_weights = load_model_from_pickle(model_path)
+
+    test_features = [
+        co2, chloride, weight, sodium, creatinine, bmi, calcium, 
+        potassium, tobacco_status, pain_severity, height, bp_diastolic, bp_systolic, heart_rate, respiratory_rate
+    ]
+
+    predicted_index, prob = predict_disease_from_features(loaded_model, *test_features)
+    decoded_label = loaded_encoder.inverse_transform([predicted_index])[0]
+
+    return Response({"message": "Diagnosis created successfully", "diagnosis": decoded_label, "probability": f"{prob:.4f}"})
