@@ -30,7 +30,6 @@ def create_encounter(request):
     encounter_data = {
         "patient_id": patient_id,
         "pain_severity": data.get("pain_severity", 0),  # Default to 0 if not provided
-        "reason_code": data.get("reason_code", ""),
         "reason_desc": data.get("reason_desc", ""),
         "start_date": start_date,
     }
