@@ -18,3 +18,11 @@ ForerSight is an AI-powered health prediction and disease prevention web applica
 - Database: Firebase Firestore
 - Frontend: NextJS, alongwith Tailwind CSS and AceternityUI
 - AI Integration: Machine learning models for health predictions
+
+### **Training Data**
+- [The Coherent Dataset](https://synthea.mitre.org/downloads)
+- https://www.kaggle.com/datasets/alexteboul/diabetes-health-indicators-dataset
+  
+
+
+
