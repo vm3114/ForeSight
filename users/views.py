@@ -3,6 +3,7 @@ import uuid
 import os
 from datetime import datetime, timedelta, timezone
 from .auth import verify_password
+from env import last_page, next_page, jinja2templates, jinja
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from firebase_admin import firestore
@@ -189,3 +190,65 @@ def get_user_details_by_email(request):
         "user_details": user_data,
         "medical_history": med_history_data if med_history_data else "No medical history found"
     })
+
+
+@api_view(['POST'])
+def get_family_history(request):
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    
+    user_doc = db.collection("users").document(email).get()
+    user_data = user_doc.to_dict()
+    patient_id = user_data.get("patient_id")
+
+    med_history_ref = db.collection("Medical_History").document(patient_id).get()
+    med_history_data = med_history_ref.to_dict() if med_history_ref.exists else None
+
+    if not med_history_data:
+        return Response({"error": "No medical history found"}, status=404)
+    
+    family_history = med_history_data.get("family_medical_history", None)
+    return Response({"message": "success", "family_history": jinja2templates(family_history)})
+
+
+@api_view(['POST'])
+def get_medications(request):
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    
+    user_doc = db.collection("users").document(email).get()
+    user_data = user_doc.to_dict()
+    patient_id = user_data.get("patient_id")
+
+    med_history_ref = db.collection("Medical_History").document(patient_id).get()
+    med_history_data = med_history_ref.to_dict() if med_history_ref.exists else None
+
+    if not med_history_data:
+        return Response({"error": "No medical history found"}, status=404)
+    
+    prescribed = None
+    medications = med_history_data.get("current_medications", None)
+    return Response({"message": "success", "medications": jinja(medications, prescribed)})
+
+
+@api_view(['POST'])
+def get_allergies(request):
+    email = request.data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    
+    user_doc = db.collection("users").document(email).get()
+    user_data = user_doc.to_dict()
+    patient_id = user_data.get("patient_id")
+
+    med_history_ref = db.collection("Medical_History").document(patient_id).get()
+    med_history_data = med_history_ref.to_dict() if med_history_ref.exists else None
+
+    if not med_history_data:
+        return Response({"error": "No medical history found"}, status=404)
+    
+    allergies = med_history_data.get("allergies", None)
+    medications = med_history_data.get("current_medications", None)
+    return Response({"message": "success", "allergies": next_page(medications, allergies)})
