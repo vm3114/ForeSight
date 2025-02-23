@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from google.cloud import firestore
-from datetime import datetime
 from utils.firebase_init import db
+from datetime import datetime
+from dateutil.parser import parse
+
 
 @api_view(['POST'])
 def create_encounter(request):
@@ -23,7 +25,7 @@ def create_encounter(request):
         return Response({"error": "patient_id and start_date are required"}, status=400)
 
     try:
-        start_date = datetime.fromisoformat(start_date)
+        start_date = parse(start_date)
     except ValueError:
         return Response({"error": "Invalid start_date format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)."}, status=400)
 

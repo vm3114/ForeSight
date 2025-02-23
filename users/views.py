@@ -10,6 +10,7 @@ from firebase_admin import firestore
 from utils.firebase_init import db
 from .auth import hash_password
 from .auth_middleware import SECRET_KEY, ALGORITHM
+from prevention import *
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
@@ -252,3 +253,40 @@ def get_allergies(request):
     allergies = med_history_data.get("allergies", None)
     medications = med_history_data.get("current_medications", None)
     return Response({"message": "success", "allergies": next_page(medications, allergies)})
+
+
+@api_view(['POST'])
+def prevention(request):
+    loaded_model = joblib.load("best_model.pkl")
+    try:
+        scaler = joblib.load("scaler.pkl")
+    except:
+        scaler = None  
+
+    data = request.data
+    email = data.get("email")
+    if not email:
+        return Response({"error": "email is required"}, status=400)
+    
+    user_doc = db.collection("users").document(email).get()
+    user_data = user_doc.to_dict()
+    patient_id = user_data.get("patient_id")
+    age = user_data.get("Age")
+
+    symptoms_ref = db.collection("Symptoms").document(patient_id).get()
+    symptoms_data = symptoms_ref.to_dict() if symptoms_ref.exists else None
+    ap_hi = symptoms_data.get("bp_systolic")
+    ap_lo = symptoms_data.get("bp_diastolic")
+    cholesterol = symptoms_data.get("cholesterol")
+    gluc = symptoms_data.get("glucose")
+    smoke = symptoms_data.get("does_smoke")
+    active = symptoms_data.get("physical_activity")
+    bmi = symptoms_data.get("weight") / (symptoms_data.get("height") / 100) ** 2
+
+    if not any([ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi]):
+        return Response({"error": "Not all parameters available."}, status=404)
+    
+    result, prob = predict_disease_from_features(loaded_model, scaler, age, ap_hi, ap_lo, cholesterol, gluc, smoke, active, bmi, threshold=0.3)
+    final = f"Predicted Label: {result}, Probability: {prob:.4f}"
+    return Response({"message": "success", "result": final})
+

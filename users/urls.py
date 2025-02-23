@@ -13,4 +13,5 @@ urlpatterns = [
     path('get_medications/', get_medications, name="get_medications"),
     path('get_allergies/', get_allergies, name="get_allergies"),
     path('get_family_history/', get_family_history, name="get_family_history"),
+    path('prevention/', prevention, name="get_prevention"),
 ]
